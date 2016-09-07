@@ -351,6 +351,11 @@ bool Map::update(float _dt) {
 
 void Map::render() {
 
+    // Do not render if any texture resources are in process of being downloaded
+    if (impl->scene->pendingTextures > 0) {
+        return;
+    }
+
     FrameInfo::beginFrame();
 
     // Invalidate render states for new frame
