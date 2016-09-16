@@ -11,6 +11,7 @@
 #include "util/hash.h"
 #include "data/properties.h"
 #include "labels/labelProperty.h"
+#include "util/lineSampler.h"
 
 #include <string>
 #include <limits>
@@ -30,7 +31,8 @@ public:
     enum class Type {
         point,
         line,
-        debug,
+        curved,
+        debug
     };
 
     enum State {
@@ -58,8 +60,8 @@ public:
         };
     };
 
-    struct ScreenTransform {
-        ScreenTransform() {}
+    struct ScreenTransform2 {
+        ScreenTransform2() {}
         union {
             glm::vec2 position;     // The label position if the label is not flattened
             glm::vec2 positions[4]; // The label positions if the label is flattened
@@ -67,6 +69,32 @@ public:
 
         glm::vec2 rotation = {1.f, 0.f};
         float alpha = 0.f;
+    };
+
+    struct ScreenTransform {
+        ScreenTransform(std::vector<LineSamplerPoint>& _points, Range& _range, bool _initRange = false)
+            : points(_points), range(_range) {
+            if (_initRange) {
+                range.start = _points.size();
+            }
+        }
+
+        auto begin() { return points.begin() + range.start; }
+        auto end() { return points.begin() + range.end(); }
+
+        bool empty() const { return range.length == 0; }
+        size_t size() const { return range.length; }
+
+        auto operator[](size_t _pos) const { return points[range.start + _pos]; }
+
+        void push_back(LineSamplerPoint _p) {
+            points.push_back(_p);
+            range.length += 1;
+        }
+
+    private:
+        std::vector<LineSamplerPoint>& points;
+        Range& range;
     };
 
     struct Transition {
@@ -100,20 +128,21 @@ public:
     virtual ~Label();
 
     // Add vertices for this label to its Style's shared Mesh
-    virtual void addVerticesToMesh() = 0;
+    virtual void addVerticesToMesh(ScreenTransform& _transform) = 0;
     virtual glm::vec2 center() const;
-    virtual void updateBBoxes(float _zoomFract) = 0;
-
-    // Update the screen position of the label
-    virtual bool updateScreenTransform(const glm::mat4& _mvp, const ViewState& _viewState, bool _drawAllLabels) = 0;
 
     bool update(const glm::mat4& _mvp,
                 const ViewState& _viewState,
+                ScreenTransform& _transform,
                 bool _drawAllLabels = false);
 
     bool evalState(float _dt);
 
-    // Occlude the label
+    /* Update the screen position of the label */
+    virtual bool updateScreenTransform(const glm::mat4& _mvp, const ViewState& _viewState,
+                                       ScreenTransform& _transform, bool _drawAllLabels) = 0;
+
+    /* Occlude the label */
     void occlude(bool _occlusion = true) { m_occluded = _occlusion; }
 
     // Checks whether the label is in a state where it can occlusion
@@ -128,17 +157,15 @@ public:
     // Gets for label options: color and offset
     const Options& options() const { return m_options; }
 
-    // Gets the extent of the oriented bounding box of the label
-    AABB aabb() const { return m_obb.getExtent(); }
-
-    // Gets the oriented bounding box of the label
-    const OBB& obb() const { return m_obb; }
-
     // The label world transform (position with the tile, in tile units)
     const WorldTransform& worldTransform() const { return m_worldTransform; }
 
     // The label screen transform, in a top left coordinate axis, y pointing down
-    const ScreenTransform& screenTransform() const { return m_screenTransform; }
+    const ScreenTransform2& screenTransform() const { return m_screenTransform; }
+
+    /* Adds the oriented bounding boxes of the label to _obbs, updates Range */
+    virtual void obbs(const ScreenTransform& _transform, std::vector<OBB>& _obbs,
+                      Range& _range, bool _append = true) = 0;
 
     State state() const { return m_state; }
 
@@ -196,11 +223,9 @@ protected:
 
     Type m_type;
 
-    OBB m_obb;
-
     WorldTransform m_worldTransform;
 
-    ScreenTransform m_screenTransform;
+    ScreenTransform2 m_screenTransform;
 
     glm::vec2 m_dim;
 

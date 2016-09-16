@@ -42,7 +42,14 @@ void Labels::processLabelUpdate(const ViewState& viewState,
     if (!labelMesh) { return; }
 
     for (auto& label : labelMesh->getLabels()) {
-        if (!label->update(mvp, viewState, drawAll)) {
+        if (!drawAll && label->state() == Label::State::dead) {
+            continue;
+        }
+
+        Range transformRange;
+        Label::ScreenTransform transform { m_points, transformRange, true };
+
+        if (!label->update(mvp, viewState, transform, drawAll)) {
             // skip dead labels
             continue;
         }
@@ -52,13 +59,14 @@ void Labels::processLabelUpdate(const ViewState& viewState,
 
             if (label->visibleState() || !label->canOcclude()) {
                 m_needUpdate |= label->evalState(dt);
-                label->addVerticesToMesh();
+                label->addVerticesToMesh(transform);
             }
         } else if (label->canOcclude()) {
             m_labels.emplace_back(label.get(), tile, isProxy);
+            m_labels.back().transform = transformRange;
         } else {
             m_needUpdate |= label->evalState(dt);
-            label->addVerticesToMesh();
+            label->addVerticesToMesh(transform);
         }
     }
 }
@@ -79,6 +87,8 @@ void Labels::updateLabels(const ViewState& _viewState, float _dt,
     bool drawAllLabels = Tangram::getDebugFlag(DebugFlags::draw_all_labels);
 
     for (const auto& tile : _tiles) {
+
+        //LOG("tile: %d/%d z:%d,%d", tile->getID().x, tile->getID().y, tile->getID().z, tile->getID().s);
 
         // discard based on level of detail
         // if ((zoom - tile->getID().z) > lodDiscard) {
@@ -246,6 +256,10 @@ void Labels::sortLabels() {
 
 void Labels::handleOcclusions(const ViewState& _viewState) {
 
+    //glm::vec2 screenSize = glm::vec2(_view.getWidth(), _view.getHeight());
+    //glm::vec2 screenSize = _viewState.viewportSize;
+    //float dz = _view.getZoom() - std::floor(_view.getZoom());
+
     m_isect2d.clear();
     m_repeatGroups.clear();
 
@@ -261,21 +275,23 @@ void Labels::handleOcclusions(const ViewState& _viewState) {
             }
         }
 
+        Label::ScreenTransform transform { m_points, entry.transform };
+
+        l->obbs(transform, m_obbs, entry.obbs);
+
         // Skip label if another label of this repeatGroup is
         // within repeatDistance.
-        if (l->options().repeatDistance > 0.f) {
-            if (withinRepeatDistance(l)) {
-                l->occlude();
-                continue;
-            }
+        if (l->options().repeatDistance > 0.f && withinRepeatDistance(l)) {
+            l->occlude();
         }
 
         int anchorIndex = l->anchorIndex();
 
+        // For each anchor
         do {
             if (l->isOccluded()) {
                 // Update BBox for anchor fallback
-                l->updateBBoxes(_viewState.fractZoom);
+                l->obbs(transform, m_obbs, entry.obbs, false);
                 if (anchorIndex == l->anchorIndex()) {
                     // Reached first anchor again
                     break;
@@ -287,40 +303,53 @@ void Labels::handleOcclusions(const ViewState& _viewState) {
             l->occlude(false);
 
             // Skip label if it intersects with a previous label.
-            auto aabb = l->aabb();
-            aabb.m_userData = static_cast<void*>(l);
 
-            m_isect2d.intersect(aabb, [](auto& a, auto& b) {
-                auto* l1 = static_cast<Label*>(a.m_userData);
-                auto* l2 = static_cast<Label*>(b.m_userData);
-                // Parents do not occlude their child
-                if (l1->parent() == l2) {
-                    return true;
-                }
+            for (int i = entry.obbs.start; i < entry.obbs.end() && !l->isOccluded(); i++) {
+                auto& obb = m_obbs[i];
 
-                if (intersect(l1->obb(), l2->obb())) {
-                    l1->occlude();
-                    // Drop label
-                    return false;
-                }
-                // Continue
-                return true;
-            });
+                m_isect2d.intersect(obb.getExtent(), [&](auto& a, auto& b) {
+                        size_t other = reinterpret_cast<size_t>(b.m_userData);
 
+                        if (l->parent()) {
 
-            // Try next anchor
+                            // TODO: optimize
+                            auto it = std::lower_bound(std::begin(m_labels), std::end(m_labels), int(other),
+                                                       [](auto& p, int other) { return other > p.obbs.start; });
+
+                            if (it != std::end(m_labels)) {
+                                if (l->parent() == it->label) {
+                                    return true;
+                                }
+                            }
+                        }
+
+                        if (intersect(obb, m_obbs[other])) {
+                            l->occlude();
+                            // Drop current label
+                            return false;
+                        }
+                        // Continue
+                        return true;
+
+                    }, false);
+            }
         } while (l->isOccluded() && l->nextAnchor());
 
-        // At this point, the label has a parent that is visible,
-        // if it is a required label, turn the parent to occluded
         if (l->isOccluded()) {
             if (l->parent() && l->options().required) {
                 l->parent()->occlude();
             }
-        }
+        } else {
+            // Insert into ISect2D grid
+            for (int i = entry.obbs.start; i < entry.obbs.end(); i++) {
+                auto aabb = m_obbs[i].getExtent();
+                aabb.m_userData = reinterpret_cast<void*>(i);
+                m_isect2d.insert(aabb);
+            }
 
-        if (l->options().repeatDistance > 0.f) {
-            m_repeatGroups[l->options().repeatGroup].push_back(l);
+            if (l->options().repeatDistance > 0.f) {
+                m_repeatGroups[l->options().repeatGroup].push_back(l);
+            }
         }
     }
 }
@@ -346,6 +375,9 @@ void Labels::updateLabelSet(const ViewState& _viewState, float _dt,
                             const std::vector<std::unique_ptr<Marker>>& _markers,
                             TileCache& _cache) {
 
+    m_points.clear();
+    m_obbs.clear();
+
     /// Collect and update labels from visible tiles
     updateLabels(_viewState, _dt, _styles, _tiles, _markers, false);
 
@@ -363,13 +395,12 @@ void Labels::updateLabelSet(const ViewState& _viewState, float _dt,
 
     handleOcclusions(_viewState);
 
-    /// Update label meshes
-
+    // Update label meshes
     for (auto& entry : m_labels) {
-        Label* label = entry.label;
+        Label::ScreenTransform transform { m_points, entry.transform };
 
-        m_needUpdate |= label->evalState(_dt);
-        label->addVerticesToMesh();
+        m_needUpdate |= entry.label->evalState(_dt);
+        entry.label->addVerticesToMesh(transform);
     }
 }
 
@@ -377,6 +408,7 @@ const std::vector<TouchItem>& Labels::getFeaturesAtPoint(const ViewState& _viewS
                                                          const std::vector<std::unique_ptr<Style>>& _styles,
                                                          const std::vector<std::shared_ptr<Tile>>& _tiles,
                                                          float _x, float _y, bool _visibleOnly) {
+#if 0
     // FIXME dpi dependent threshold
     const float thumbSize = 50;
 
@@ -403,8 +435,9 @@ const std::vector<TouchItem>& Labels::getFeaturesAtPoint(const ViewState& _viewS
                 if (!options.interactive) { continue; }
 
                 if (!_visibleOnly) {
-                    label->updateScreenTransform(mvp, _viewState, false);
-                    label->updateBBoxes(_viewState.fractZoom);
+                    label->updateScreenTransform(mvp, screenSize, m_screenTransform, false);
+                    label->updateBBoxes(dz);
+
                 } else if (!label->visibleState()) {
                     continue;
                 }
@@ -421,6 +454,7 @@ const std::vector<TouchItem>& Labels::getFeaturesAtPoint(const ViewState& _viewS
     std::sort(m_touchItems.begin(), m_touchItems.end(),
               [](auto& a, auto& b){ return a.distance < b.distance; });
 
+#endif
 
     return m_touchItems;
 }
@@ -441,7 +475,7 @@ void Labels::drawDebug(RenderState& rs, const View& _view) {
         // draw bounding box
         switch (label->state()) {
         case Label::State::sleep:
-            Primitives::setColor(rs, 0xdddddd);
+            Primitives::setColor(rs, 0xffffff);
             break;
         case Label::State::visible:
             Primitives::setColor(rs, 0x000000);
@@ -475,7 +509,10 @@ void Labels::drawDebug(RenderState& rs, const View& _view) {
         }
 #endif
 
-        Primitives::drawPoly(rs, &(label->obb().getQuad())[0], 4);
+        for (int i = entry.obbs.start; i < entry.obbs.end(); i++) {
+
+            Primitives::drawPoly(rs, &(m_obbs[i].getQuad())[0], 4);
+        }
 
         if (label->parent()) {
             Primitives::setColor(rs, 0xff0000);
@@ -490,10 +527,6 @@ void Labels::drawDebug(RenderState& rs, const View& _view) {
 
         Primitives::setColor(rs, 0x000000);
         Primitives::drawLine(rs, sp, sp - glm::vec2(offset.x, -offset.y));
-
-        // draw projected anchor point
-        Primitives::setColor(rs, 0x0000ff);
-        Primitives::drawRect(rs, sp - glm::vec2(1.f), sp + glm::vec2(1.f));
 
 #if 0
         if (label->options().repeatGroup != 0 && label->state() == Label::State::visible) {

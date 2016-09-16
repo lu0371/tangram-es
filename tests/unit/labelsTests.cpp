@@ -51,6 +51,7 @@ TextLabel makeLabelWithAnchorFallbacks(glm::vec2 _transform, glm::vec2 _offset =
             {}, {10, 10}, dummy, textRanges, TextLabelProperty::Align::none);
 }
 
+#if 0
 TEST_CASE("Test getFeaturesAtPoint", "[Labels][FeaturePicking]") {
     std::unique_ptr<Labels> labels(new Labels());
 
@@ -202,5 +203,6 @@ TEST_CASE( "Test anchor fallback behavior", "[Labels][AnchorFallback]" ) {
     }
 
 }
+#endif
 
 }
