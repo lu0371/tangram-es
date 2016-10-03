@@ -80,7 +80,7 @@ public:
     // before implicit destruction of 'scene' above!
     // In particular any references of Labels and Markers to FontContext
     TileWorker tileWorker{MAX_WORKERS};
-    TileManager tileManager{tileWorker, featureSelection};
+    TileManager tileManager{tileWorker};
     MarkerManager markerManager;
     FrameBuffer selectionBuffer{256, 256};
 
@@ -430,7 +430,6 @@ void Map::render() {
         if (drawSelectionBuffer) { return; }
 
         for (const auto& query : impl->selectionQueries) {
-            LOG("Solving query %f %f", query.position[0], query.position[1]);
             std::vector<TouchItem> items;
 
             float x = query.position[0] / impl->view.getWidth();
@@ -443,6 +442,7 @@ void Map::render() {
             if (props) {
                 items.push_back({props, {x, y}, 0});
             }
+
             query.callback(items);
         }
 
