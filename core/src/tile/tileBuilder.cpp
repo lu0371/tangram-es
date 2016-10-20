@@ -1,6 +1,6 @@
 #include "tile/tileBuilder.h"
 
-#include "data/dataSource.h"
+#include "data/tileSource.h"
 #include "gl/mesh.h"
 #include "scene/dataLayer.h"
 #include "scene/scene.h"
@@ -30,7 +30,7 @@ StyleBuilder* TileBuilder::getStyleBuilder(const std::string& _name) {
     return it->second.get();
 }
 
-std::shared_ptr<Tile> TileBuilder::build(TileID _tileID, const TileData& _tileData, const DataSource& _source) {
+std::shared_ptr<Tile> TileBuilder::build(TileID _tileID, const TileData& _tileData, const TileSource& _source) {
 
     auto tile = std::make_shared<Tile>(_tileID, *m_scene->mapProjection(), &_source);
 

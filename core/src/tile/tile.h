@@ -12,7 +12,7 @@
 
 namespace Tangram {
 
-class DataSource;
+class TileSource;
 class MapProjection;
 class Style;
 class View;
@@ -38,7 +38,7 @@ class Tile {
 
 public:
 
-    Tile(TileID _id, const MapProjection& _projection, const DataSource* _source = nullptr);
+    Tile(TileID _id, const MapProjection& _projection, const TileSource* _source = nullptr);
 
 
     virtual ~Tile();
@@ -100,10 +100,10 @@ private:
 
     float m_inverseScale = 1;
 
-    /* ID of the DataSource */
+    /* ID of the TileSource */
     const int32_t m_sourceId;
 
-    /* State of the DataSource for which this tile was created */
+    /* State of the TileSource for which this tile was created */
     const int64_t m_sourceGeneration;
 
     bool m_proxyState = false;

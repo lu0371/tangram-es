@@ -1,6 +1,6 @@
 #pragma once
 
-#include "data/dataSource.h"
+#include "data/tileSource.h"
 #include "scene/styleContext.h"
 #include "scene/drawRule.h"
 #include "labels/labelCollider.h"
@@ -8,7 +8,7 @@
 namespace Tangram {
 
 class DataLayer;
-class DataSource;
+class TileSource;
 class Tile;
 struct TileData;
 class StyleBuilder;
@@ -23,7 +23,7 @@ public:
 
     StyleBuilder* getStyleBuilder(const std::string& _name);
 
-    std::shared_ptr<Tile> build(TileID _tileID, const TileData& _data, const DataSource& _source);
+    std::shared_ptr<Tile> build(TileID _tileID, const TileData& _data, const TileSource& _source);
 
     const Scene& scene() const { return *m_scene; }
 
