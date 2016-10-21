@@ -56,6 +56,7 @@ struct TileID;
 @property (assign, nonatomic) float zoom;
 @property (assign, nonatomic) float rotation;
 @property (assign, nonatomic) float tilt;
+@property (readonly, nonatomic) CGFloat pixelScale;
 
 - (void)renderOnce;
 
