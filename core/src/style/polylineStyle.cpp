@@ -164,6 +164,7 @@ public:
         bool closedPolygon = false;
         bool outlineOn = false;
         bool lineOn = true;
+        uint32_t selectionColor = 0;
     };
 
     void setup(const Tile& _tile) override;
@@ -179,7 +180,7 @@ public:
         : StyleBuilder(_style), m_style(_style),
           m_meshData(2) {}
 
-    void addMesh(const Line& _line, const Parameters& _params, const DrawRule& _rule);
+    void addMesh(const Line& _line, const Parameters& _params);
 
     void buildLine(const Line& _line, const typename Parameters::Attributes& _att,
                    MeshData<V>& _mesh, GLuint _selection);
@@ -343,6 +344,8 @@ auto PolylineStyleBuilder<V>::parseRule(const DrawRule& _rule, const Properties&
         stroke.color <<= (m_zoom % 6);
     }
 
+    p.selectionColor = _rule.selectionColor;
+
     return p;
 }
 
@@ -397,14 +400,14 @@ void PolylineStyleBuilder<V>::addFeature(const Feature& _feat, const DrawRule& _
         params.keepTileEdges = true;
 
         for (auto& line : _feat.lines) {
-            addMesh(line, params, _rule);
+            addMesh(line, params);
         }
     } else {
         params.closedPolygon = true;
 
         for (auto& polygon : _feat.polygons) {
             for (const auto& line : polygon) {
-                addMesh(line, params, _rule);
+                addMesh(line, params);
             }
         }
     }
@@ -433,7 +436,7 @@ void PolylineStyleBuilder<V>::buildLine(const Line& _line, const typename Parame
 }
 
 template <class V>
-void PolylineStyleBuilder<V>::addMesh(const Line& _line, const Parameters& _params, const DrawRule& _rule) {
+void PolylineStyleBuilder<V>::addMesh(const Line& _line, const Parameters& _params) {
 
     m_builder.cap = _params.fill.cap;
     m_builder.join = _params.fill.join;
@@ -441,7 +444,7 @@ void PolylineStyleBuilder<V>::addMesh(const Line& _line, const Parameters& _para
     m_builder.keepTileEdges = _params.keepTileEdges;
     m_builder.closedPolygon = _params.closedPolygon;
 
-    if (_params.lineOn) { buildLine(_line, _params.fill, m_meshData[0], _rule.selectionColor); }
+    if (_params.lineOn) { buildLine(_line, _params.fill, m_meshData[0], _params.selectionColor); }
 
     if (!_params.outlineOn) { return; }
 
@@ -454,7 +457,7 @@ void PolylineStyleBuilder<V>::addMesh(const Line& _line, const Parameters& _para
         m_builder.join = _params.stroke.join;
         m_builder.miterLimit = _params.stroke.miterLimit;
 
-        buildLine(_line, _params.stroke, m_meshData[1], _rule.selectionColor);
+        buildLine(_line, _params.stroke, m_meshData[1], _params.selectionColor);
 
     } else {
         auto& fill = m_meshData[0];
@@ -477,7 +480,7 @@ void PolylineStyleBuilder<V>::addMesh(const Line& _line, const Parameters& _para
         short order = _params.stroke.height[1];
 
         for (; vertexIt != fill.vertices.end(); ++vertexIt) {
-            stroke.vertices.emplace_back(*vertexIt, order, width, abgr, _rule.selectionColor);
+            stroke.vertices.emplace_back(*vertexIt, order, width, abgr, _params.selectionColor);
         }
     }
 }

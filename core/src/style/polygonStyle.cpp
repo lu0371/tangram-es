@@ -94,6 +94,7 @@ public:
         glm::vec2 extrude;
         float height;
         float minHeight;
+        uint32_t selectionColor = 0;
     } m_params;
 
     void setup(const Tile& _tile) override {
@@ -159,6 +160,7 @@ void PolygonStyleBuilder<V>::parseRule(const DrawRule& _rule, const Properties& 
     m_params.minHeight = getLowerExtrudeMeters(extrude, _props) * m_tileUnitsPerMeter;
     m_params.height = getUpperExtrudeMeters(extrude, _props) * m_tileUnitsPerMeter;
 
+    m_params.selectionColor = _rule.selectionColor;
 }
 
 template <class V>
@@ -166,10 +168,10 @@ void PolygonStyleBuilder<V>::addPolygon(const Polygon& _polygon, const Propertie
 
     parseRule(_rule, _props);
 
-    m_builder.addVertex = [this, _rule](const glm::vec3& coord,
+    m_builder.addVertex = [this](const glm::vec3& coord,
                                  const glm::vec3& normal,
                                  const glm::vec2& uv) {
-        m_meshData.vertices.push_back({ coord, m_params.order, normal, uv, m_params.color, _rule.selectionColor });
+        m_meshData.vertices.push_back({ coord, m_params.order, normal, uv, m_params.color, m_params.selectionColor });
     };
 
     if (m_params.minHeight != m_params.height) {
