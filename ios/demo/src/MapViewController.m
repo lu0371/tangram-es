@@ -35,9 +35,10 @@
 {
     [super viewDidLoad];
 
+    self.mapViewDelegate = [[ViewControllerDelegate alloc] init];
+
     [super loadSceneFileAsync:@"https://tangrams.github.io/walkabout-style/walkabout-style.yaml"];
 }
-
 
 - (void)didReceiveMemoryWarning
 {
