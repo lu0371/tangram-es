@@ -17,8 +17,17 @@ fi
 
 if [[ ${PLATFORM} == "ios" ]]; then
     # Build ios project
-    echo "Building ios project (simulator)"
-    make ios-sim
+    echo "Building ios demo app and framework"
+    make ios
+
+    #if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then
+    #    # Build demo app
+    #    make ios
+
+    #    # TODO: upload binary framework
+    #else
+    #    make ios-framework-sim
+    #fi
 fi
 
 if [[ ${PLATFORM} == "android" ]]; then
