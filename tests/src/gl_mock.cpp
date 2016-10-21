@@ -220,6 +220,7 @@ void GL::deleteFramebuffers(GLsizei n, const GLuint *framebuffers) {
 void GL::deleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) {
 }
 GLenum GL::checkFramebufferStatus(GLenum target) {
+    return 0;
 }
 
 }
