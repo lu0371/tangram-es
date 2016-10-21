@@ -78,6 +78,8 @@ struct TestTileSource : TileSource {
 
     };
 
+    virtual const char* mimeType() override { return ""; };
+
     int tileTaskCount = 0;
 
     TestTileSource() : TileSource("", nullptr) {
