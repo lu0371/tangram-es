@@ -75,6 +75,8 @@ protected:
         uint32_t stroke = 0;
         uint8_t fontScale = 0;
         TextRange textRanges;
+
+        uint32_t selectionColor = 0;
     } m_attributes;
 
     float m_tileSize = 0;
