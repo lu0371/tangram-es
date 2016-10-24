@@ -141,7 +141,7 @@ std::shared_ptr<Tile> TileBuilder::build(TileID _tileID, const TileData& _tileDa
         tile->setMesh(builder.second->style(), builder.second->build());
     }
 
-    tile->setSelectionFeatures(m_selectionFeatures);
+    tile->setSelectionFeatures(std::move((m_selectionFeatures)));
 
     return tile;
 }
