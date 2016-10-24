@@ -421,9 +421,6 @@ void Map::render() {
             }
         }
 
-        // early frame exit
-        if (drawSelectionBuffer) { return; }
-
         for (const auto& query : impl->selectionQueries) {
             std::vector<TouchItem> items;
 
@@ -443,6 +440,9 @@ void Map::render() {
         }
 
         impl->selectionQueries.clear();
+
+        // early frame exit
+        if (drawSelectionBuffer) { return; }
     }
 
     // Setup default framebuffer for a new frame
