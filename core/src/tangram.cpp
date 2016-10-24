@@ -23,6 +23,7 @@
 #include "view/view.h"
 #include "data/clientGeoJsonSource.h"
 #include "gl.h"
+#include "gl/framebuffer.h"
 #include "gl/hardware.h"
 #include "util/ease.h"
 #include "util/jobQueue.h"
@@ -431,10 +432,11 @@ void Map::render() {
 
             // TODO: read with a scalable thumb size
             GLuint color = impl->selectionBuffer.readAt(x, y);
-            auto props = impl->scene->featureSelection()->featurePropertiesForEntry(color);
 
-            if (props) {
-                items.push_back({props, {x, y}, 0});
+            for (const auto& tile : impl->tileManager.getVisibleTiles()) {
+                if (auto props = tile->getSelectionFeature(color)) {
+                    items.push_back({props, {x, y}, 0});
+                }
             }
 
             query.callback(items);
