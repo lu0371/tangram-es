@@ -67,6 +67,8 @@ void deinit() {
 
     s_shader.reset(nullptr);
     s_layout.reset(nullptr);
+    s_textureShader.reset(nullptr);
+    s_textureLayout.reset(nullptr);
     s_initialized = false;
 
 }
