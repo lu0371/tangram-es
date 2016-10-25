@@ -410,14 +410,13 @@ void Map::render() {
             impl->selectionBuffer.applyAsRenderTarget(impl->renderState);
         }
 
-        {
-            std::lock_guard<std::mutex> lock(impl->tilesMutex);
-            for (const auto& style : impl->scene->styles()) {
-                style->onBeginDrawSelectionFrame(impl->renderState, impl->view, *(impl->scene));
+        std::lock_guard<std::mutex> lock(impl->tilesMutex);
 
-                for (const auto& tile : impl->tileManager.getVisibleTiles()) {
-                    style->drawSelectionFrame(impl->renderState, *tile);
-                }
+        for (const auto& style : impl->scene->styles()) {
+            style->onBeginDrawSelectionFrame(impl->renderState, impl->view, *(impl->scene));
+
+            for (const auto& tile : impl->tileManager.getVisibleTiles()) {
+                style->drawSelectionFrame(impl->renderState, *tile);
             }
         }
 
