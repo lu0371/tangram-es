@@ -58,7 +58,8 @@ Scene::Scene(const std::string& _path)
 }
 
 Scene::Scene(const Scene& _other)
-    : id(s_serial++) {
+    : id(s_serial++),
+      m_featureSelection(std::make_unique<FeatureSelection>()) {
 
     m_config = _other.m_config;
     m_fontContext = _other.m_fontContext;
