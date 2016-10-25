@@ -82,7 +82,7 @@ public:
     TileWorker tileWorker{MAX_WORKERS};
     TileManager tileManager{tileWorker};
     MarkerManager markerManager;
-    FrameBuffer selectionBuffer{256, 256};
+    FrameBuffer selectionBuffer{256, 256, false};
 
     bool cacheGlState;
 
@@ -475,6 +475,8 @@ void Map::render() {
     }
 
     impl->labels.drawDebug(impl->renderState, impl->view);
+
+    impl->selectionBuffer.drawDebug(impl->renderState, glm::vec2(impl->view.getWidth(), impl->view.getHeight()));
 
     FrameInfo::draw(impl->renderState, impl->view, impl->tileManager);
 }
