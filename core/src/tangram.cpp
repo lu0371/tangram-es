@@ -404,12 +404,7 @@ void Map::render() {
     // Render feature selection pass to offscreen framebuffer
     if (impl->selectionQueries.size() > 0 || drawSelectionBuffer) {
 
-        if (drawSelectionBuffer) {
-            glm::vec2 viewport(impl->view.getWidth(), impl->view.getHeight());
-            FrameBuffer::apply(impl->renderState, impl->renderState.defaultFrameBuffer(), viewport, glm::vec4(0.0));
-        } else {
-            impl->selectionBuffer->applyAsRenderTarget(impl->renderState);
-        }
+        impl->selectionBuffer->applyAsRenderTarget(impl->renderState);
 
         std::lock_guard<std::mutex> lock(impl->tilesMutex);
 
@@ -440,15 +435,18 @@ void Map::render() {
         }
 
         impl->selectionQueries.clear();
-
-        // early frame exit
-        if (drawSelectionBuffer) { return; }
     }
 
     // Setup default framebuffer for a new frame
     glm::vec2 viewport(impl->view.getWidth(), impl->view.getHeight());
     FrameBuffer::apply(impl->renderState, impl->renderState.defaultFrameBuffer(),
                        viewport, impl->scene->background().asVec4());
+
+    if (drawSelectionBuffer) {
+        impl->selectionBuffer->drawDebug(impl->renderState, viewport);
+        FrameInfo::draw(impl->renderState, impl->view, impl->tileManager);
+        return;
+    }
 
     for (const auto& style : impl->scene->styles()) {
         style->onBeginFrame(impl->renderState);
@@ -476,8 +474,6 @@ void Map::render() {
     }
 
     impl->labels.drawDebug(impl->renderState, impl->view);
-
-    impl->selectionBuffer->drawDebug(impl->renderState, glm::vec2(impl->view.getWidth(), impl->view.getHeight()));
 
     FrameInfo::draw(impl->renderState, impl->view, impl->tileManager);
 }
