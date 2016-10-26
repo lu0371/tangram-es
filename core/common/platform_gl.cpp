@@ -324,7 +324,9 @@ void GL::deleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) {
 }
 
 GLenum GL::checkFramebufferStatus(GLenum target) {
-    return GL_CHECK(glCheckFramebufferStatus(target));
+    GLenum status = glCheckFramebufferStatus(target);
+    GL_CHECK();
+    return status;
 }
 
 }
