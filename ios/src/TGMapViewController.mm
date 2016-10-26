@@ -228,14 +228,14 @@
 }
 
 - (void)animateToTilt:(float)radians withDuration:(float)seconds {
-  [self animateToTilt:radians withDuration:seconds withEaseType:TGEaseType::TGEaseTypeCubic];
+    [self animateToTilt:radians withDuration:seconds withEaseType:TGEaseType::TGEaseTypeCubic];
 }
 
 - (void)animateToTilt:(float)radians withDuration:(float)seconds withEaseType:(TGEaseType)easeType {
-  if (self.map) {
-    Tangram::EaseType ease = [self convertEaseTypeFrom:easeType];
-    self.map->setTiltEased(radians, seconds, ease);
-  }
+    if (self.map) {
+        Tangram::EaseType ease = [self convertEaseTypeFrom:easeType];
+        self.map->setTiltEased(radians, seconds, ease);
+    }
 }
 
 - (TGCameraType)cameraType {
